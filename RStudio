@@ -58,6 +58,7 @@ summary(LModel2)
 #Test predictions
 LMPredictions<- predict(Lmodel2, testSet, interval = "predict", level = .95)
 
+#View Predictions
 head(LMPredictions)
 
 #Compare actual and predicted
@@ -84,6 +85,7 @@ NewExisting1$'Five' <- NULL
 #predictions
 LMPredictions2 <- predict(LModel2, NewExisting1 = NewExisting1, interval = "predict", level = .95)
 
+#View Predictions
 LMPredictions2
 
 #Install SVM Package (e1071)
@@ -103,23 +105,47 @@ SVMTestPred <- predict(SVMmodel, testSet)
 #Predictions
 NewSVMPred <- predict(SVMmodel, NewExisting1 = NewExisting1)
 
+#View Predictions
 NewSVMPred
 
 #Tuning model to find best values for cost and gamma.
 Tuning<- tune.svm(Volume~., data = trainSet, gamma = 2^(-1:1), cost = 2^(2:4))
 
+#View Tuning
 Tuning
 
-TunedSVMModel <- svm(Volume~., data = trainSet, cost = 8, gamma = 0.5)
-svmTestPredTuned <- predict(newsvmmodel, testSet)
-newsvmPredTuned <- predict(newsvmmodel, newdata = newData)
-newsvmPredTuned
-#random forest package
+#Run new tuned SVM Model
+NewTunedSVMModel <- svm(Volume~., data = trainSet, cost = 8, gamma = 0.5)
+
+#Test tuned
+TunedSVMModelTestPredictions<- predict(NewTunedSVMModel, testSet)
+TunedSVMModelNewPredictions<- predict(NewTunedSVMModel, NewExisting1 = NewExisting1)
+
+#View Predictions
+TunedSVMModelNewPredictions
+
+#Random Forest
+
+#Install Random Forest
+install.packages(randomForest)
+
+#Call on Random Forest
 library(randomForest)
-rfmodel <- randomForest(Volume~., data = trainSet)
-rfmodel #see regression rf with 500 trees w/ 4 var tried at each split
-importance(rfmodel)
-varImpPlot(rfmodel) #3StarReviews, PositiveServiceReviews
-rfTestPred <- predict(rfmodel, testSet)
-newrfPred <- predict(rfmodel, newdata = newData)
-newrfPred
+
+#Run random forest model on trainSet
+RFmodel1 <- randomForest(Volume~., data = trainSet)
+
+#View impactfulness of attributes.
+importance(RFmodel1)
+
+#Plot impactfulness of attributes.
+varImpPlot(RFmodel1) 
+
+#Test Predictions
+RFTestPred <- predict(RFmodel1, testSet)
+
+#Predictions
+NewRFPred <- predict(RFmodel1, NewExisting1 = NewExisting1)
+
+#View Predictions
+NewRFPred

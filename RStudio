@@ -89,7 +89,7 @@ LMPredictions2 <- predict(LModel2, NewExisting1 = NewExisting1, interval = "pred
 LMPredictions2
 
 #Install SVM Package (e1071)
-install.packages(e1071)
+install.packages("e1071")
 
 #Call on e1071
 library(e1071)
@@ -127,7 +127,7 @@ TunedSVMModelNewPredictions
 #Random Forest
 
 #Install Random Forest
-install.packages(randomForest)
+install.packages("randomForest")
 
 #Call on Random Forest
 library(randomForest)

@@ -1,0 +1,125 @@
+getwd()
+setwd("~/Desktop/Course2/Raw Data/New_Products_Analysis_Data")
+existing1<- read.csv("existing product attributes.csv", header = TRUE, stringsAsFactors = FALSE)
+
+#OR
+
+library(foreign)
+#Creating/setting it as a dataframe
+existing1<-read.arff("existing.arff")
+
+str(existing1)
+
+#change the column names
+names(existing1) <- c("Type", "Number", "Price", "Five", "Four", "Three", "Two", "One", "Positive", "Negative", "Consumer", "Best", "Weight", "Depth", "Width","Height","Margin","Volume")
+
+#Product type not needed.
+existing1$'Type' <- NULL
+
+#change data type of BestSellersRank
+existing1$Best <- as.numeric(existing1$Best)
+
+#Address Missing Values
+existing1$Best[is.na(existing1$Best)] <- mean(existing1$Best, na.rm = TRUE)
+
+str(existing1)
+summary(existing1)
+
+#training/testing
+trainSize <- round(nrow(existing1) * 0.7)
+testSize <- nrow(existing1) - trainSize
+set.seed(123)
+training_indices <- sample(seq_len(nrow(existing1)), size = trainSize)
+trainSet <- existing1[training_indices, ]
+testSet <- existing1[-training_indices, ]
+
+#LM -Volume Y-value
+Lmodel <- lm(formula = trainSet$Volume ~ . , data = trainSet)
+summary(Lmodel)
+#Check for overfitting-Yes
+
+#Collinearity
+cor(existing1)
+
+#Remove 5 Star Rating because of P-Value/Corllinearity
+existing1$'Five' <- NULL
+
+#Re-do training/testing
+trainSize <- round(nrow(existing1) * 0.7)
+testSize <- nrow(existing1) - trainSize
+training_indices <- sample(seq_len(nrow(existing1)), size = trainSize)
+trainSet <- existing1[training_indices, ]
+testSet <- existing1[-training_indices, ]
+
+#Re-run LM
+LModel2 <- lm(formula = trainSet$Volume ~ . , data = trainSet)
+summary(LModel2)
+
+#Test predictions
+LMPredictions<- predict(Lmodel2, testSet, interval = "predict", level = .95)
+
+head(LMPredictions)
+
+#Compare actual and predicted
+APComparison <- cbind(testSet$Volume, predictions[ ,1])
+colnames(APComparison) <- c("actual", "predicted")
+
+head(APComparison)
+summary(APComparison)
+
+#MAPE
+mape <- (sum(abs(APComparison[ ,1]-APComparison[ ,2]) / abs(APComparison[ ,1]))/nrow(APComparison)) * 100
+mapeTable <- cbind(APComparison, abs(APComparison[ ,1]-APComparison[ ,2])/APComparison[ ,1] *100)
+colnames(mapeTable) [3] <- "absolute percent error"
+head(mapeTable)
+sum(mapeTable[ ,3])/nrow(comparison)
+
+#Import New Product Attribute CSV file- Preprocess same as Existing Product Attributes CSV file
+NewExisting1<- read.csv("NewProductAttributes.csv", header = TRUE, stringsAsFactors = FALSE)
+NewExisting1$'Type' <- NULL
+NewExisting1$Best <- as.numeric(NewExisting1$Best)
+NewExisting1$Best[is.na(NewExisting1$Best)] <- mean(NewExisting1$Best, na.rm = TRUE)
+NewExisting1$'Five' <- NULL
+
+#predictions
+LMPredictions2 <- predict(LModel2, NewExisting1 = NewExisting1, interval = "predict", level = .95)
+
+LMPredictions2
+
+#Install SVM Package (e1071)
+install.packages(e1071)
+
+#Call on e1071
+library(e1071)
+
+#Create SVM Model
+SVMModel <- svm(Volume~., data = trainSet)
+
+summary(SVMModel) 
+
+#Testing Predictions
+SVMTestPred <- predict(SVMmodel, testSet)
+
+#Predictions
+NewSVMPred <- predict(SVMmodel, NewExisting1 = NewExisting1)
+
+NewSVMPred
+
+#Tuning model to find best values for cost and gamma.
+Tuning<- tune.svm(Volume~., data = trainSet, gamma = 2^(-1:1), cost = 2^(2:4))
+
+Tuning
+
+TunedSVMModel <- svm(Volume~., data = trainSet, cost = 8, gamma = 0.5)
+svmTestPredTuned <- predict(newsvmmodel, testSet)
+newsvmPredTuned <- predict(newsvmmodel, newdata = newData)
+newsvmPredTuned
+#random forest package
+library(randomForest)
+rfmodel <- randomForest(Volume~., data = trainSet)
+rfmodel #see regression rf with 500 trees w/ 4 var tried at each split
+importance(rfmodel)
+varImpPlot(rfmodel) #3StarReviews, PositiveServiceReviews
+rfTestPred <- predict(rfmodel, testSet)
+newrfPred <- predict(rfmodel, newdata = newData)
+newrfPred

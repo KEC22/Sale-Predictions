@@ -1,151 +1,118 @@
 getwd()
-setwd("~/Desktop/Course2/Raw Data/New_Products_Analysis_Data")
-existing1<- read.csv("existing product attributes.csv", header = TRUE, stringsAsFactors = FALSE)
+setwd("~/Desktop/Course 2/Raw Data/New_Products_Analysis_Data")
 
-#OR
+summary(existing)
 
-library(foreign)
-#Creating/setting it as a dataframe
-existing1<-read.arff("existing.arff")
+library(readr)
+existing <- read.csv("~/Desktop/Course 2/Raw Data/New_Products_Analysis_Data/existing product attributes.csv", header = TRUE, stringsAsFactors = FALSE)
 
-str(existing1)
+str(existing)
+names(existing)
 
-#change the column names
-names(existing1) <- c("Type", "Number", "Price", "Five", "Four", "Three", "Two", "One", "Positive", "Negative", "Consumer", "Best", "Weight", "Depth", "Width","Height","Margin","Volume")
+plot(existing$Price)
 
-#Product type not needed.
-existing1$'Type' <- NULL
+str(existing)
 
-#change data type of BestSellersRank
-existing1$Best <- as.numeric(existing1$Best)
+names(existing) <- c("Type", "Number", "Price", "Five", "Four", "Three", "Two", "One", "Positive", "Negative", "Consumer", "Best", "Weight", "Depth", "Width","Height","Margin","Volume")
+names(existing)[2] <- "Numbers"
 
-#Address Missing Values
-existing1$Best[is.na(existing1$Best)] <- mean(existing1$Best, na.rm = TRUE)
+existing$'Type' <- NULL
+str(existing)
+existing$Best<- as.numeric(existing$Best)
+existing$Best[is.na(existing$Best)] <- mean(existing$Best, na.rm = TRUE)
 
-str(existing1)
-summary(existing1)
+str(existing)
+summary(existing)
 
-#training/testing
-trainSize <- round(nrow(existing1) * 0.7)
-testSize <- nrow(existing1) - trainSize
+trainSize <- round(nrow(existing) * 0.7)
+testSize <- nrow(existing) - trainSize
+
 set.seed(123)
-training_indices <- sample(seq_len(nrow(existing1)), size = trainSize)
-trainSet <- existing1[training_indices, ]
-testSet <- existing1[-training_indices, ]
+training_indices <- sample(seq_len(nrow(existing)), size = trainSize)
+trainSet <- existing[training_indices, ]
+testSet <- existing[-training_indices, ]
 
-#LM -Volume Y-value
-Lmodel <- lm(formula = trainSet$Volume ~ . , data = trainSet)
-summary(Lmodel)
-#Check for overfitting-Yes
+model <- lm(formula = trainSet$Volume ~ . , data = trainSet)
 
-#Collinearity
-cor(existing1)
+summary(model)
+summary(existing)
 
-#Remove 5 Star Rating because of P-Value/Corllinearity
-existing1$'Five' <- NULL
+cor(existing)
 
-#Re-do training/testing
-trainSize <- round(nrow(existing1) * 0.7)
-testSize <- nrow(existing1) - trainSize
-training_indices <- sample(seq_len(nrow(existing1)), size = trainSize)
-trainSet <- existing1[training_indices, ]
-testSet <- existing1[-training_indices, ]
+install.packages("corrplot")
+library(corrplot)
+correlationmatrix<- cor(existing)
+corrplot(correlationmatrix, method="circle")
 
-#Re-run LM
-LModel2 <- lm(formula = trainSet$Volume ~ . , data = trainSet)
-summary(LModel2)
+corrplot(correlationmatrix, method="number")
+corrplot(correlationmatrix, method="color")
 
-#Test predictions
-LMPredictions<- predict(Lmodel2, testSet, interval = "predict", level = .95)
+existing$Five <- NULL
 
-#View Predictions
-head(LMPredictions)
+set.seed(123)
+trainSize <- round(nrow(existing) * 0.7)
+testSize <- nrow(existing) - trainSize
+training_indices <- sample(seq_len(nrow(existing)), size = trainSize)
+trainSet <- existing[training_indices, ]
+nrow(trainSet)
+testSet <- existing[-training_indices, ]
+model <- lm(formula = trainSet$Volume ~ . , data = trainSet)
+summary(model)
 
-#Compare actual and predicted
-APComparison <- cbind(testSet$Volume, predictions[ ,1])
-colnames(APComparison) <- c("actual", "predicted")
+predictions <- predict(model, testSet, interval = "predict", level = .95)
+head(predictions)
+summary(predictions)
 
-head(APComparison)
-summary(APComparison)
+#import new product data
+newData <- read.csv("new product attributes.csv", header = TRUE, stringsAsFactors = FALSE)
+names(newData) <- c("Type","Number","Price","Five","Four","Three","Two","One","Positive","Negative","Consumer","Best","Weight","Depth","Width","Height","Margin","Volume")
+newData$'Type'<-NULL
+newData$Best<-as.numeric(newData$Best)
+newData$'Five' <- NULL
 
-#MAPE
-mape <- (sum(abs(APComparison[ ,1]-APComparison[ ,2]) / abs(APComparison[ ,1]))/nrow(APComparison)) * 100
-mapeTable <- cbind(APComparison, abs(APComparison[ ,1]-APComparison[ ,2])/APComparison[ ,1] *100)
-colnames(mapeTable) [3] <- "absolute percent error"
-head(mapeTable)
-sum(mapeTable[ ,3])/nrow(comparison)
-
-#Import New Product Attribute CSV file- Preprocess same as Existing Product Attributes CSV file
-NewExisting1<- read.csv("NewProductAttributes.csv", header = TRUE, stringsAsFactors = FALSE)
-NewExisting1$'Type' <- NULL
-NewExisting1$Best <- as.numeric(NewExisting1$Best)
-NewExisting1$Best[is.na(NewExisting1$Best)] <- mean(NewExisting1$Best, na.rm = TRUE)
-NewExisting1$'Five' <- NULL
-
-#predictions
-LMPredictions2 <- predict(LModel2, NewExisting1 = NewExisting1, interval = "predict", level = .95)
-
-#View Predictions
-LMPredictions2
-
-#Install SVM Package (e1071)
-install.packages("e1071")
-
-#Call on e1071
 library(e1071)
+install.packages('e1071')
+#create svm model
 
-#Create SVM Model
-SVMModel <- svm(Volume~., data = trainSet)
+svmmodel <- svm(trainSet$Volume~., data = trainSet)
+summary(svmmodel) #view summary before making predictions
+svmTestPred <- predict(svmmodel, testSet)
+svmTestPred
 
-summary(SVMModel) 
+rmse <- function(error)
+{
+  sqrt(mean(error^2))
+}
 
-#Testing Predictions
-SVMTestPred <- predict(SVMmodel, testSet)
+error <- testSet$Volume - svmTestPred
+svrPredictionRMSE <- rmse(error)
+svrPredictionRMSE
 
-#Predictions
-NewSVMPred <- predict(SVMmodel, NewExisting1 = NewExisting1)
+newsvmPred <- predict(svmmodel, newdata = newData)
+newsvmPred #predictions where kernel=radial, cost=1, gamma=0.0833; view in summary
+#need to tune model; find best values for cost and gamma
 
-#View Predictions
-NewSVMPred
+obj <- tune.svm(Volume~., data = trainSet, gamma = 2^(-1:1), cost = 2^(2:4))
 
-#Tuning model to find best values for cost and gamma.
-Tuning<- tune.svm(Volume~., data = trainSet, gamma = 2^(-1:1), cost = 2^(2:4))
+obj #10-fold cross-validataion; kernel = radial, gamma = 0.5, cost = 4
+newsvmmodel <- svm(Volume~., data = trainSet, cost = 4, gamma = 0.5)
+newsvmmodel
+svmTestPredTuned <- predict(newsvmmodel, testSet)
+newsvmPredTuned <- predict(newsvmmodel, newdata = newData)
+newsvmPredTuned
 
-#View Tuning
-Tuning
+rmse <- function(error)
+{
+  sqrt(mean(error^2))
+}
 
-#Run new tuned SVM Model
-NewTunedSVMModel <- svm(Volume~., data = trainSet, cost = 8, gamma = 0.5)
+error <- testSet$Volume - svmTestPredTuned
+svrPredictionRMSE <- rmse(error)
+svrPredictionRMSE
 
-#Test tuned
-TunedSVMModelTestPredictions<- predict(NewTunedSVMModel, testSet)
-TunedSVMModelNewPredictions<- predict(NewTunedSVMModel, NewExisting1 = NewExisting1)
-
-#View Predictions
-TunedSVMModelNewPredictions
-
-#Random Forest
-
-#Install Random Forest
-install.packages("randomForest")
-
-#Call on Random Forest
 library(randomForest)
-
-#Run random forest model on trainSet
-RFmodel1 <- randomForest(Volume~., data = trainSet)
-
-#View impactfulness of attributes.
-importance(RFmodel1)
-
-#Plot impactfulness of attributes.
-varImpPlot(RFmodel1) 
-
-#Test Predictions
-RFTestPred <- predict(RFmodel1, testSet)
-
-#Predictions
-NewRFPred <- predict(RFmodel1, NewExisting1 = NewExisting1)
-
-#View Predictions
-NewRFPred
+rfmodel <- randomForest(Volume~., data = trainSet)
+rfmodel #see regression rf with 500 trees w/ 4 var tried at each split
+rfTestPred <- predict(rfmodel, testSet)
+newrfPred <- predict(rfmodel, newdata = newData)
+newrfPred
